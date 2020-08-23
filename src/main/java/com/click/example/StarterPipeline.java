@@ -41,30 +41,30 @@ import org.slf4j.LoggerFactory;
  * <p>To run this starter example using managed resource in Google Cloud
  * Platform, you should specify the following command-line options:
  * --project=<YOUR_PROJECT_ID>
+ * --jobName=<YOUR_DATAFLOW_JOB>
+ * --dataflowJobFile=<YOUR_DATAFLOW_JOB_TEMPLATE_LOCATION_IN_CLOUD_STORAGE>
  * --stagingLocation=<STAGING_LOCATION_IN_CLOUD_STORAGE>
  * --runner=DataflowRunner
  */
 public class StarterPipeline {
-//  private static final Logger LOG = LoggerFactory.getLogger(StarterPipeline.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(StarterPipeline.class);
 
     public static interface WordCountOptions extends PipelineOptions {
         @Description("Path of the file to read from")
         @Default.String("gs://cloud-dataflow-bucket-input/*.txt")
         String getInputFile();
 
-        void setInputFile(String value);
-
+        /**
+         * Memorystore/Redis instance host. Update with running memorystore host
+         * @return
+         */
         @Description("Redis host")
         @Default.String("127.0.0.1")
         String getRedisHost();
 
-        void setRedisHost(String value);
-
-        @Description("redis port")
+        @Description("Redis port")
         @Default.Integer(6379)
         Integer getRedisPort();
-
-        void setRedisPort(Integer value);
 
     }
 
@@ -74,27 +74,26 @@ public class StarterPipeline {
                 .as(WordCountOptions.class);
 
         Pipeline p = Pipeline.create(options);
-//        PipelineOptionsFactory.fromArgs(args).withValidation().create());
 
-        PCollection<String[]> recordSet = p.apply(
+        PCollection<String[]> recordSet =
+                p.apply(
                 "ReadLines", TextIO.read().from(options.getInputFile())).apply(
                 "Transform Record",   // the transform name
-                ParDo.of(new DoFn<String, String[]>() {    // a DoFn as an anonymous inner class instance
-
+                    ParDo.of(new DoFn<String, String[]>() {    // a DoFn as an anonymous inner class instance
                     private final Logger LOG = LoggerFactory.getLogger(StarterPipeline.class);
 
                     @ProcessElement
                     public void processElement(@Element String line, OutputReceiver<String[]> out) {
-                        LOG.info("line content: " + line);
+                        LOGGER.info("Line content: " + line);
                         String[] fields = line.split("\\|");
                         out.output(fields);
                     }
                 }));
         recordSet.apply(
-                "Processing Record",                     // the transform name
-                ParDo.of(new DoFn<String[], KV<String, String>>() {    // a DoFn as an anonymous inner class instance
+                "Processing Record",
+                ParDo.of(new DoFn<String[], KV<String, String>>() {
 
-                    private final Logger LOG = LoggerFactory.getLogger(StarterPipeline.class);
+                    private final Logger LOGGER = LoggerFactory.getLogger(StarterPipeline.class);
 
                     @ProcessElement
                     public void processElement(@Element String[] fields, OutputReceiver<KV<String, String>> out) {
@@ -104,31 +103,32 @@ public class StarterPipeline {
                         String dob = null;
                         String postalCode = null;
                         for (String field : fields) {
-                            LOG.info("field content: " + field.toString());
+                            LOGGER.info("field content: " + field.toString());
                             String[] fieldKeyValue = field.split(":");
                             if (fieldKeyValue.length == 2) {
                                 String key = fieldKeyValue[0].trim().toLowerCase();
                                 String value = fieldKeyValue[1].trim().toLowerCase();
                                 if (key.equals("guid")) {
                                     guid = value;
-                                    LOG.info("found guid: " + guid);
+                                    LOGGER.info("found guid: " + guid);
                                 } else if (key.equals("firstname")) {
                                     firstName = value;
-                                    LOG.info("found firstName: " + firstName);
+                                    LOGGER.info("found firstName: " + firstName);
                                 } else if (key.equals("lastname")) {
                                     lastName = value;
-                                    LOG.info("found lastName: " + lastName);
+                                    LOGGER.info("found lastName: " + lastName);
                                 } else if (key.equals("dob")) {
                                     dob = value;
-                                    LOG.info("found dob: " + dob);
+                                    LOGGER.info("found dob: " + dob);
                                 } else if (key.equals("postalcode")) {
                                     postalCode = value;
-                                    LOG.info("found postalCode: " + postalCode);
+                                    LOGGER.info("found postalCode: " + postalCode);
                                 }
                             }
                         }
-
-
+                        /**
+                         * Checking if guid is null or not
+                         */
                         if (guid != null) {
                             out.output(KV.of("firstname:".concat(firstName), guid));
                             out.output(KV.of("lastname:".concat(lastName), guid));
@@ -141,10 +141,10 @@ public class StarterPipeline {
                         .withEndpoint(options.getRedisHost(), options.getRedisPort()));
 
         recordSet.apply(
-                "Processing Payroll Provider ID",     // the transform name
-                ParDo.of(new DoFn<String[], KV<String, KV<String, String>>>() {    // a DoFn as an anonymous inner class instance
+                "Processing Payroll Provider ID",
+                ParDo.of(new DoFn<String[], KV<String, KV<String, String>>>() {
 
-                    private final Logger LOG = LoggerFactory.getLogger(StarterPipeline.class);
+                    private final Logger LOGGER = LoggerFactory.getLogger(StarterPipeline.class);
 
                     @ProcessElement
                     public void processElement(@Element String[] fields,
@@ -152,24 +152,24 @@ public class StarterPipeline {
                         String guid = null;
                         String ppid = null;
                         for (String field : fields) {
-                            LOG.info("field content: " + field.toString());
+                            LOGGER.info("field content: " + field.toString());
                             String[] fieldKeyValue = field.split(":");
                             if (fieldKeyValue.length == 2) {
                                 String key = fieldKeyValue[0].trim().toLowerCase();
                                 String value = fieldKeyValue[1].trim().toLowerCase();
                                 if (key.equals("guid")) {
                                     guid = value;
-                                    LOG.info("found guid: " + guid);
+                                    LOGGER.info("Found guid: " + guid);
                                 } else if (key.equals("pid")) {
                                     ppid = value;
-                                    LOG.info("payroll provider: " + ppid);
+                                    LOGGER.info("Payroll Provider ID: " + ppid);
                                 }
                             }
                         }
 
                         if (guid != null && ppid != null) {
                             out.output(KV.of("hash11:".concat(guid), KV.of("hash12", ppid)));
-                            LOG.info("Created the hash...");
+                            LOGGER.info("Created the hash!");
                         }
                     }
                 })).apply("Writing Hash Data into Redis",

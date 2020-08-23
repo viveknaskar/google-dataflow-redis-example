@@ -10,17 +10,14 @@ import redis.clients.jedis.Pipeline;
 
 public class CustomRedisIODoFun extends DoFn<KV<String, KV<String, String>>, Void> {
 
-    private final Logger LOG = LoggerFactory.getLogger(StarterPipeline.class);
+    private final Logger LOGGER = LoggerFactory.getLogger(StarterPipeline.class);
 
     private static final int DEFAULT_BATCH_SIZE = 100;
-
     private final String host;
     private final int port;
     private final int timeout;
-
     private transient Jedis jedis;
     private transient Pipeline pipeline;
-
     private int batchCount;
 
     public CustomRedisIODoFun(String host, int port) {
@@ -36,7 +33,7 @@ public class CustomRedisIODoFun extends DoFn<KV<String, KV<String, String>>, Voi
     @Setup
     public void setup() {
         jedis = RedisConnectionConfiguration.create().withHost(host).withPort(port).withTimeout(timeout).connect();
-        LOG.debug("Redis Connected successfully...");
+        LOGGER.debug("Redis Connected successfully...");
     }
 
     @StartBundle
@@ -44,7 +41,7 @@ public class CustomRedisIODoFun extends DoFn<KV<String, KV<String, String>>, Voi
         pipeline = jedis.pipelined();
         pipeline.multi();
         batchCount = 0;
-        LOG.debug("Redis Pipeline configured...");
+        LOGGER.debug("Redis Pipeline configured...");
     }
 
     @ProcessElement
@@ -60,9 +57,9 @@ public class CustomRedisIODoFun extends DoFn<KV<String, KV<String, String>>, Voi
             pipeline.sync();
             pipeline.multi();
             batchCount = 0;
-            LOG.debug("Batch Write Complete and pipeline Flushed");
+            LOGGER.debug("Batch Write Complete and pipeline flushed!");
         }
-        LOG.debug("Record Processed...");
+        LOGGER.debug("Record Processed!");
     }
 
     private void writeRecord(KV<String, KV<String, String>> record) {
@@ -82,12 +79,12 @@ public class CustomRedisIODoFun extends DoFn<KV<String, KV<String, String>>, Voi
             pipeline.sync();
         }
         batchCount = 0;
-        LOG.debug("Pipeline Flushed...");
+        LOGGER.debug("Pipeline Flushed!");
     }
 
     @Teardown
     public void teardown() {
         jedis.close();
-        LOG.debug("Connection Closed");
+        LOGGER.debug("Connection Closed!");
     }
 }
