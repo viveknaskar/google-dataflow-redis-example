@@ -54,6 +54,8 @@ public class StarterPipeline {
         @Default.String("gs://cloud-dataflow-bucket-input/*.txt")
         String getInputFile();
 
+        void setInputFile(String value);
+
         /**
          * Memorystore/Redis instance host. Update with running memorystore host
          * @return
@@ -62,9 +64,13 @@ public class StarterPipeline {
         @Default.String("127.0.0.1")
         String getRedisHost();
 
+        void setRedisHost(String value);
+
         @Description("Redis port")
         @Default.Integer(6379)
         Integer getRedisPort();
+
+        void setRedisPort(Integer value);
 
     }
 
