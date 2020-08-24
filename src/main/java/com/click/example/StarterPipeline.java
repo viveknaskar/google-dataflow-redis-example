@@ -19,14 +19,19 @@ package com.click.example;
 
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;
-import org.apache.beam.sdk.options.*;
 import org.apache.beam.sdk.io.redis.RedisIO;
+import org.apache.beam.sdk.options.Default;
+import org.apache.beam.sdk.options.Description;
+import org.apache.beam.sdk.options.PipelineOptions;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.HashMap;
 
 /**
  * A starter example for writing Beam programs.
@@ -47,7 +52,6 @@ import org.slf4j.LoggerFactory;
  * --runner=DataflowRunner
  */
 public class StarterPipeline {
-  private static final Logger LOGGER = LoggerFactory.getLogger(StarterPipeline.class);
 
     public static interface WordCountOptions extends PipelineOptions {
         @Description("Path of the file to read from")
@@ -61,7 +65,7 @@ public class StarterPipeline {
          * @return
          */
         @Description("Redis host")
-        @Default.String("127.0.0.1")
+        @Default.String("10.207.12.131")
         String getRedisHost();
 
         void setRedisHost(String value);
@@ -83,18 +87,18 @@ public class StarterPipeline {
 
         PCollection<String[]> recordSet =
                 p.apply(
-                "ReadLines", TextIO.read().from(options.getInputFile())).apply(
-                "Transform Record",   // the transform name
-                    ParDo.of(new DoFn<String, String[]>() {    // a DoFn as an anonymous inner class instance
-                    private final Logger LOG = LoggerFactory.getLogger(StarterPipeline.class);
+                        "ReadLines", TextIO.read().from(options.getInputFile())).apply(
+                        "Transform Record",   // the transform name
+                        ParDo.of(new DoFn<String, String[]>() {    // a DoFn as an anonymous inner class instance
+                            private final Logger LOGGER = LoggerFactory.getLogger(StarterPipeline.class);
 
-                    @ProcessElement
-                    public void processElement(@Element String line, OutputReceiver<String[]> out) {
-                        LOGGER.info("Line content: " + line);
-                        String[] fields = line.split("\\|");
-                        out.output(fields);
-                    }
-                }));
+                            @ProcessElement
+                            public void processElement(@Element String line, OutputReceiver<String[]> out) {
+                                LOGGER.info("Line content: " + line);
+                                String[] fields = line.split("\\|");
+                                out.output(fields);
+                            }
+                        }));
         recordSet.apply(
                 "Processing Record",
                 ParDo.of(new DoFn<String[], KV<String, String>>() {
@@ -103,43 +107,23 @@ public class StarterPipeline {
 
                     @ProcessElement
                     public void processElement(@Element String[] fields, OutputReceiver<KV<String, String>> out) {
-                        String guid = null;
-                        String firstName = null;
-                        String lastName = null;
-                        String dob = null;
-                        String postalCode = null;
-                        for (String field : fields) {
-                            LOGGER.info("field content: " + field.toString());
-                            String[] fieldKeyValue = field.split(":");
-                            if (fieldKeyValue.length == 2) {
-                                String key = fieldKeyValue[0].trim().toLowerCase();
-                                String value = fieldKeyValue[1].trim().toLowerCase();
-                                if (key.equals("guid")) {
-                                    guid = value;
-                                    LOGGER.info("found guid: " + guid);
-                                } else if (key.equals("firstname")) {
-                                    firstName = value;
-                                    LOGGER.info("found firstName: " + firstName);
-                                } else if (key.equals("lastname")) {
-                                    lastName = value;
-                                    LOGGER.info("found lastName: " + lastName);
-                                } else if (key.equals("dob")) {
-                                    dob = value;
-                                    LOGGER.info("found dob: " + dob);
-                                } else if (key.equals("postalcode")) {
-                                    postalCode = value;
-                                    LOGGER.info("found postalCode: " + postalCode);
-                                }
-                            }
-                        }
-                        /**
-                         * Checking if guid is null or not
-                         */
-                        if (guid != null) {
-                            out.output(KV.of("firstname:".concat(firstName), guid));
-                            out.output(KV.of("lastname:".concat(lastName), guid));
-                            out.output(KV.of("dob:".concat(dob), guid));
-                            out.output(KV.of("postalcode:".concat(postalCode), guid));
+
+                        HashMap<String, String> hmap = new HashMap<String, String>();
+                        hmap.put("guid", fields[1]);
+                        hmap.put("firstName", fields[2]);
+                        hmap.put("middleName", fields[3]);
+                        hmap.put("lastName", fields[4]);
+                        hmap.put("dob", fields[5]);
+                        hmap.put("postalCode", fields[6]);
+                        hmap.put("gender", fields[7]);
+
+                        if (fields[1] != null) {
+                            out.output(KV.of("hash1:".concat(hmap.get("firstName")), hmap.get("guid")));
+                            out.output(KV.of("hash2:".concat(hmap.get("middleName")), hmap.get("guid")));
+                            out.output(KV.of("hash3:".concat(hmap.get("lastName")), hmap.get("guid")));
+                            out.output(KV.of("hash4:".concat(hmap.get("dob")), hmap.get("guid")));
+                            out.output(KV.of("hash5:".concat(hmap.get("postalCode")), hmap.get("guid")));
+                            out.output(KV.of("hash6:".concat(hmap.get("gender")), hmap.get("guid")));
                         }
                     }
                 })).apply("Writing field indexes into redis",
@@ -154,27 +138,13 @@ public class StarterPipeline {
 
                     @ProcessElement
                     public void processElement(@Element String[] fields,
-                                     OutputReceiver<KV<String, KV<String, String>>> out) {
-                        String guid = null;
-                        String ppid = null;
-                        for (String field : fields) {
-                            LOGGER.info("field content: " + field.toString());
-                            String[] fieldKeyValue = field.split(":");
-                            if (fieldKeyValue.length == 2) {
-                                String key = fieldKeyValue[0].trim().toLowerCase();
-                                String value = fieldKeyValue[1].trim().toLowerCase();
-                                if (key.equals("guid")) {
-                                    guid = value;
-                                    LOGGER.info("Found guid: " + guid);
-                                } else if (key.equals("pid")) {
-                                    ppid = value;
-                                    LOGGER.info("Payroll Provider ID: " + ppid);
-                                }
-                            }
-                        }
+                                               OutputReceiver<KV<String, KV<String, String>>> out) {
+                        HashMap<String, String> hmap = new HashMap<String, String>();
+                        hmap.put("ppid", fields[0]);
+                        hmap.put("guid", fields[1]);
 
-                        if (guid != null && ppid != null) {
-                            out.output(KV.of("hash11:".concat(guid), KV.of("hash12", ppid)));
+                        if (fields[0] != null && fields[1] != null) {
+                            out.output(KV.of("hash11:".concat(hmap.get("guid")), KV.of("hash12", hmap.get("ppid"))));
                             LOGGER.info("Created the hash!");
                         }
                     }
