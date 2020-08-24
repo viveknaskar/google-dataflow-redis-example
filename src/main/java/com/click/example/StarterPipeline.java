@@ -65,7 +65,7 @@ public class StarterPipeline {
          * @return
          */
         @Description("Redis host")
-        @Default.String("10.207.12.131")
+        @Default.String("127.0.0.1")
         String getRedisHost();
 
         void setRedisHost(String value);
