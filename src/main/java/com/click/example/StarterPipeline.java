@@ -1,20 +1,4 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+
 package com.click.example;
 
 import org.apache.beam.sdk.Pipeline;
@@ -33,31 +17,16 @@ import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 
-/**
- * A starter example for writing Beam programs.
- *
- * <p>The example takes two strings, converts them to their upper-case
- * representation and logs them.
- *
- * <p>To run this starter example locally using DirectRunner, just
- * execute it without any additional parameters from your favorite development
- * environment.
- *
- * <p>To run this starter example using managed resource in Google Cloud
- * Platform, you should specify the following command-line options:
- * --project=<YOUR_PROJECT_ID>
- * --jobName=<YOUR_DATAFLOW_JOB>
- * --dataflowJobFile=<YOUR_DATAFLOW_JOB_TEMPLATE_LOCATION_IN_CLOUD_STORAGE>
- * --stagingLocation=<STAGING_LOCATION_IN_CLOUD_STORAGE>
- * --runner=DataflowRunner
- */
 public class StarterPipeline {
 
     public static interface WordCountOptions extends PipelineOptions {
+        /**
+         * Bucket where the text files are taken as input file
+         * @return
+         */
         @Description("Path of the file to read from")
         @Default.String("gs://cloud-dataflow-bucket-input/*.txt")
         String getInputFile();
-
         void setInputFile(String value);
 
         /**
@@ -67,68 +36,70 @@ public class StarterPipeline {
         @Description("Redis host")
         @Default.String("127.0.0.1")
         String getRedisHost();
-
         void setRedisHost(String value);
 
+        /**
+         * Memorystore/Redis instance port. The default port for Redis is 6379
+         * @return
+         */
         @Description("Redis port")
         @Default.Integer(6379)
         Integer getRedisPort();
-
         void setRedisPort(Integer value);
 
     }
 
     public static void main(String[] args) {
 
-        WordCountOptions options = PipelineOptionsFactory.fromArgs(args).withValidation()
-                .as(WordCountOptions.class);
+        WordCountOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(WordCountOptions.class);
 
         Pipeline p = Pipeline.create(options);
 
         PCollection<String[]> recordSet =
                 p.apply(
-                        "ReadLines", TextIO.read().from(options.getInputFile())).apply(
-                        "Transform Record",   // the transform name
-                        ParDo.of(new DoFn<String, String[]>() {    // a DoFn as an anonymous inner class instance
+                        "ReadLines", TextIO.read().from(options.getInputFile()))
+                          .apply(
+                            "Transform Record",
+                            ParDo.of(new DoFn<String, String[]>() {
+                                private final Logger LOGGER = LoggerFactory.getLogger(StarterPipeline.class);
+
+                                @ProcessElement
+                                public void processElement(@Element String line, OutputReceiver<String[]> out) {
+                                    LOGGER.info("Line content: " + line);
+                                    String[] fields = line.split("\\|");
+                                    out.output(fields);
+                                }
+                        }));
+                recordSet.apply(
+                        "Processing Record",
+                        ParDo.of(new DoFn<String[], KV<String, String>>() {
+
                             private final Logger LOGGER = LoggerFactory.getLogger(StarterPipeline.class);
 
                             @ProcessElement
-                            public void processElement(@Element String line, OutputReceiver<String[]> out) {
-                                LOGGER.info("Line content: " + line);
-                                String[] fields = line.split("\\|");
-                                out.output(fields);
+                            public void processElement(@Element String[] fields, OutputReceiver<KV<String, String>> out) {
+
+                                HashMap<String, String> hmap = new HashMap<String, String>();
+                                hmap.put("guid", fields[1]);
+                                hmap.put("firstName", fields[2]);
+                                hmap.put("middleName", fields[3]);
+                                hmap.put("lastName", fields[4]);
+                                hmap.put("dob", fields[5]);
+                                hmap.put("postalCode", fields[6]);
+                                hmap.put("gender", fields[7]);
+
+                                if (fields[1] != null) {
+                                    out.output(KV.of("hash1:".concat(hmap.get("firstName")), hmap.get("guid")));
+                                    out.output(KV.of("hash2:".concat(hmap.get("middleName")), hmap.get("guid")));
+                                    out.output(KV.of("hash3:".concat(hmap.get("lastName")), hmap.get("guid")));
+                                    out.output(KV.of("hash4:".concat(hmap.get("dob")), hmap.get("guid")));
+                                    out.output(KV.of("hash5:".concat(hmap.get("postalCode")), hmap.get("guid")));
+                                    out.output(KV.of("hash6:".concat(hmap.get("gender")), hmap.get("guid")));
+                                }
                             }
-                        }));
-        recordSet.apply(
-                "Processing Record",
-                ParDo.of(new DoFn<String[], KV<String, String>>() {
-
-                    private final Logger LOGGER = LoggerFactory.getLogger(StarterPipeline.class);
-
-                    @ProcessElement
-                    public void processElement(@Element String[] fields, OutputReceiver<KV<String, String>> out) {
-
-                        HashMap<String, String> hmap = new HashMap<String, String>();
-                        hmap.put("guid", fields[1]);
-                        hmap.put("firstName", fields[2]);
-                        hmap.put("middleName", fields[3]);
-                        hmap.put("lastName", fields[4]);
-                        hmap.put("dob", fields[5]);
-                        hmap.put("postalCode", fields[6]);
-                        hmap.put("gender", fields[7]);
-
-                        if (fields[1] != null) {
-                            out.output(KV.of("hash1:".concat(hmap.get("firstName")), hmap.get("guid")));
-                            out.output(KV.of("hash2:".concat(hmap.get("middleName")), hmap.get("guid")));
-                            out.output(KV.of("hash3:".concat(hmap.get("lastName")), hmap.get("guid")));
-                            out.output(KV.of("hash4:".concat(hmap.get("dob")), hmap.get("guid")));
-                            out.output(KV.of("hash5:".concat(hmap.get("postalCode")), hmap.get("guid")));
-                            out.output(KV.of("hash6:".concat(hmap.get("gender")), hmap.get("guid")));
-                        }
-                    }
-                })).apply("Writing field indexes into redis",
-                RedisIO.write().withMethod(RedisIO.Write.Method.SADD)
-                        .withEndpoint(options.getRedisHost(), options.getRedisPort()));
+                        })).apply("Writing field indexes into redis",
+                        RedisIO.write().withMethod(RedisIO.Write.Method.SADD)
+                                .withEndpoint(options.getRedisHost(), options.getRedisPort()));
 
         recordSet.apply(
                 "Processing Payroll Provider ID",
@@ -137,8 +108,7 @@ public class StarterPipeline {
                     private final Logger LOGGER = LoggerFactory.getLogger(StarterPipeline.class);
 
                     @ProcessElement
-                    public void processElement(@Element String[] fields,
-                                               OutputReceiver<KV<String, KV<String, String>>> out) {
+                    public void processElement(@Element String[] fields, OutputReceiver<KV<String, KV<String, String>>> out) {
                         HashMap<String, String> hmap = new HashMap<String, String>();
                         hmap.put("ppid", fields[0]);
                         hmap.put("guid", fields[1]);
@@ -150,7 +120,6 @@ public class StarterPipeline {
                     }
                 })).apply("Writing Hash Data into Redis",
                 ParDo.of(new CustomRedisIODoFun(options.getRedisHost(), options.getRedisPort())));
-
         p.run();
     }
 }

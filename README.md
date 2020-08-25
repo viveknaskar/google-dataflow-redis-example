@@ -1,5 +1,5 @@
 # Dataflow Pipeline Example with Custom Redis Implementation
-A custom implementation of HMSET for storing data Memorystore in a cloud dataflow project. HMSET has been deprecated in Redis 5.0
+A custom implementation of HSET for storing data Memorystore in a cloud dataflow project.
 
 ## What does it do here?
 This is a cloud dataflow pipline code that processes data from a cloud storage bucket, transform it and stores in Google's highly scalable, reduced latency in-memory database called memorystore which is an implementation of Redis (5.0 version)

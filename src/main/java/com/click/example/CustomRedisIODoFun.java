@@ -3,14 +3,10 @@ package com.click.example;
 import org.apache.beam.sdk.io.redis.RedisConnectionConfiguration;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.KV;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.Pipeline;
 
 public class CustomRedisIODoFun extends DoFn<KV<String, KV<String, String>>, Void> {
-
-    private final Logger LOGGER = LoggerFactory.getLogger(StarterPipeline.class);
 
     private static final int DEFAULT_BATCH_SIZE = 100;
     private final String host;
@@ -33,7 +29,6 @@ public class CustomRedisIODoFun extends DoFn<KV<String, KV<String, String>>, Voi
     @Setup
     public void setup() {
         jedis = RedisConnectionConfiguration.create().withHost(host).withPort(port).withTimeout(timeout).connect();
-        LOGGER.debug("Redis Connected successfully...");
     }
 
     @StartBundle
@@ -41,7 +36,6 @@ public class CustomRedisIODoFun extends DoFn<KV<String, KV<String, String>>, Voi
         pipeline = jedis.pipelined();
         pipeline.multi();
         batchCount = 0;
-        LOGGER.debug("Redis Pipeline configured...");
     }
 
     @ProcessElement
@@ -57,9 +51,7 @@ public class CustomRedisIODoFun extends DoFn<KV<String, KV<String, String>>, Voi
             pipeline.sync();
             pipeline.multi();
             batchCount = 0;
-            LOGGER.debug("Batch Write Complete and pipeline flushed!");
         }
-        LOGGER.debug("Record Processed!");
     }
 
     private void writeRecord(KV<String, KV<String, String>> record) {
@@ -79,12 +71,10 @@ public class CustomRedisIODoFun extends DoFn<KV<String, KV<String, String>>, Voi
             pipeline.sync();
         }
         batchCount = 0;
-        LOGGER.debug("Pipeline Flushed!");
     }
 
     @Teardown
     public void teardown() {
         jedis.close();
-        LOGGER.debug("Connection Closed!");
     }
 }
