@@ -17,6 +17,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 
+import static com.click.example.PipelineConstants.REDIS_KEY_SEPARATOR;
+
 public class StarterPipeline {
 
     public static interface WordCountOptions extends PipelineOptions {
@@ -79,22 +81,41 @@ public class StarterPipeline {
                             @ProcessElement
                             public void processElement(@Element String[] fields, OutputReceiver<KV<String, String>> out) {
 
-                                HashMap<String, String> hmap = new HashMap<String, String>();
-                                hmap.put("guid", fields[1]);
-                                hmap.put("firstName", fields[2]);
+                               /* HashMap<String, Integer> hmap = new HashMap<String, Integer>();
+                                hmap.put("guid", 1);
+                                hmap.put(FIRSTNAME, fields[2]);
                                 hmap.put("middleName", fields[3]);
                                 hmap.put("lastName", fields[4]);
                                 hmap.put("dob", fields[5]);
                                 hmap.put("postalCode", fields[6]);
-                                hmap.put("gender", fields[7]);
+                                hmap.put("gender", fields[7]);*/
 
-                                if (fields[1] != null) {
-                                    out.output(KV.of("hash1:".concat(hmap.get("firstName")), hmap.get("guid")));
-                                    out.output(KV.of("hash2:".concat(hmap.get("middleName")), hmap.get("guid")));
-                                    out.output(KV.of("hash3:".concat(hmap.get("lastName")), hmap.get("guid")));
-                                    out.output(KV.of("hash4:".concat(hmap.get("dob")), hmap.get("guid")));
-                                    out.output(KV.of("hash5:".concat(hmap.get("postalCode")), hmap.get("guid")));
-                                    out.output(KV.of("hash6:".concat(hmap.get("gender")), hmap.get("guid")));
+                                if (fields[RedisFieldIndex.GUID.getValue()] != null) {
+
+                                    out.output(KV.of(KeyPrefix.FIRSTNAME.toString()
+                                            .concat(REDIS_KEY_SEPARATOR)
+                                            .concat(fields[RedisFieldIndex.FIRSTNAME.getValue()]), fields[RedisFieldIndex.GUID.getValue()]));
+
+                                    out.output(KV.of(KeyPrefix.MIDDLENAME.toString()
+                                            .concat(REDIS_KEY_SEPARATOR)
+                                            .concat(fields[RedisFieldIndex.MIDDLENAME.getValue()]), fields[RedisFieldIndex.GUID.getValue()]));
+
+                                    out.output(KV.of(KeyPrefix.LASTNAME.toString()
+                                            .concat(REDIS_KEY_SEPARATOR)
+                                            .concat(fields[RedisFieldIndex.LASTNAME.getValue()]), fields[RedisFieldIndex.GUID.getValue()]));
+
+                                    out.output(KV.of(KeyPrefix.DOB.toString()
+                                            .concat(REDIS_KEY_SEPARATOR)
+                                            .concat(fields[RedisFieldIndex.DOB.getValue()]), fields[RedisFieldIndex.GUID.getValue()]));
+
+                                    out.output(KV.of(KeyPrefix.POSTAL_CODE.toString()
+                                            .concat(REDIS_KEY_SEPARATOR)
+                                            .concat(fields[RedisFieldIndex.POSTAL_CODE.getValue()]), fields[RedisFieldIndex.GUID.getValue()]));
+
+                                    out.output(KV.of(KeyPrefix.GENDER.toString()
+                                            .concat(REDIS_KEY_SEPARATOR)
+                                            .concat(fields[RedisFieldIndex.GENDER.getValue()]), fields[RedisFieldIndex.GUID.getValue()]));
+
                                 }
                             }
                         })).apply("Writing field indexes into redis",
