@@ -4,14 +4,15 @@ package com.click.example;
  * Enum for the Field indexes
  */
 public enum RedisFieldIndex {
-    FIRSTNAME(1),
-    MIDDLENAME(2),
-    LASTNAME(3),
-    DOB(4),
-    POSTAL_CODE(5),
-    GENDER(6),
-    GUID(7),
-    PPID(8);
+    PPID(0),
+    GUID(1),
+    FIRSTNAME(2),
+    MIDDLENAME(3),
+    LASTNAME(4),
+    DOB(5),
+    POSTAL_CODE(6),
+    GENDER(7);
+
 
     private final Integer value;
 
