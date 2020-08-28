@@ -1,4 +1,3 @@
-
 package com.click.example;
 
 import org.apache.beam.sdk.Pipeline;
@@ -20,28 +19,25 @@ import static com.click.example.PipelineConstants.REGEX_LINE_SPLITTER_PIPE;
 
 public class StarterPipeline {
 
-    public static interface WordCountOptions extends PipelineOptions {
+    public static interface StorageToRedisOptions extends PipelineOptions {
         /**
          * Bucket where the text files are taken as input file
-         * @return
          */
         @Description("Path of the file to read from")
-        @Default.String("gs://cloud-dataflow-bucket-input/*.txt")
+        @Default.String("DEFAULT")
         String getInputFile();
         void setInputFile(String value);
 
         /**
-         * Memorystore/Redis instance host. Update with running memorystore host
-         * @return
+         * Memorystore/Redis instance host. Update with a running memorystore instance in the command-line to execute the pipeline
          */
         @Description("Redis host")
-        @Default.String("127.0.0.1")
+        @Default.String("DEFAULT")
         String getRedisHost();
         void setRedisHost(String value);
 
         /**
          * Memorystore/Redis instance port. The default port for Redis is 6379
-         * @return
          */
         @Description("Redis port")
         @Default.Integer(6379)
@@ -51,8 +47,12 @@ public class StarterPipeline {
     }
 
     public static void main(String[] args) {
-
-        WordCountOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(WordCountOptions.class);
+        /**
+         * Constructed StorageToRedisOptions object using the method PipelineOptionsFactory.fromArgs to read options from command-line
+         */
+        StorageToRedisOptions options = PipelineOptionsFactory.fromArgs(args)
+                .withValidation()
+                .as(StorageToRedisOptions.class);
 
         Pipeline p = Pipeline.create(options);
 
@@ -74,8 +74,6 @@ public class StarterPipeline {
                 recordSet.apply(
                         "Processing Record",
                         ParDo.of(new DoFn<String[], KV<String, String>>() {
-
-                            private final Logger LOGGER = LoggerFactory.getLogger(StarterPipeline.class);
 
                             @ProcessElement
                             public void processElement(@Element String[] fields, OutputReceiver<KV<String, String>> out) {

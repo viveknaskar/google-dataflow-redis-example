@@ -13,6 +13,8 @@ mvn compile exec:java \
   -Dexec.mainClass=com.click.example.StarterPipeline \
   -Dexec.args="--project=your-project-id \
   --jobName=dataflow-custom-redis-job \
+  --redisHost=127.0.0.1 \
+  --inputFile=gs://cloud-dataflow-bucket-input/*.txt \
   --stagingLocation=gs://cloud-dataflow-pipeline-bucket/staging/ \
   --dataflowJobFile=gs://cloud-dataflow-pipeline-bucket/templates/dataflow-custom-redis-template \
   --gcpTempLocation=gs://cloud-dataflow-pipeline-bucket/tmp/ \
