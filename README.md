@@ -7,6 +7,18 @@ This is a cloud dataflow pipline code that processes data from a cloud storage b
 ## What the heck is cloud dataflow?
 Well, its a pipeline provided by Google to process data to a form we need and it just takes seconds to transform bulk of data. Companies like Spotify and Dailymotion uses this service.
 
+## Command to execute the pipeline:
+```
+mvn compile exec:java \
+  -Dexec.mainClass=com.click.example.StarterPipeline \
+  -Dexec.args="--project=your-project-id \
+  --jobName=dataflow-custom-redis-job \
+  --stagingLocation=gs://cloud-dataflow-pipeline-bucket/staging/ \
+  --dataflowJobFile=gs://cloud-dataflow-pipeline-bucket/templates/dataflow-custom-redis-template \
+  --gcpTempLocation=gs://cloud-dataflow-pipeline-bucket/tmp/ \
+  --runner=DataflowRunner"
+```  
+
 ## Check the data inserted in Memorystore (Redis) datastore
 For checking whether the processed data is stored in the Redis instance after the dataflow pipeline is executed successfully, you must first connect to the Redis instance from any Compute Engine VM instance located within the same project, region and network as the Redis instance.
 
