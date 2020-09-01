@@ -3,9 +3,6 @@ package com.click.example;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.io.redis.RedisIO;
-import org.apache.beam.sdk.options.Default;
-import org.apache.beam.sdk.options.Description;
-import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -19,36 +16,10 @@ import static com.click.example.PipelineConstants.REGEX_LINE_SPLITTER_PIPE;
 
 public class StarterPipeline {
 
-    public static interface StorageToRedisOptions extends PipelineOptions {
-        /**
-         * Bucket where the text files are taken as input file
-         */
-        @Description("Path of the file to read from")
-        @Default.String("DEFAULT")
-        String getInputFile();
-        void setInputFile(String value);
-
-        /**
-         * Memorystore/Redis instance host. Update with a running memorystore instance in the command-line to execute the pipeline
-         */
-        @Description("Redis host")
-        @Default.String("DEFAULT")
-        String getRedisHost();
-        void setRedisHost(String value);
-
-        /**
-         * Memorystore/Redis instance port. The default port for Redis is 6379
-         */
-        @Description("Redis port")
-        @Default.Integer(6379)
-        Integer getRedisPort();
-        void setRedisPort(Integer value);
-
-    }
-
     public static void main(String[] args) {
         /**
-         * Constructed StorageToRedisOptions object using the method PipelineOptionsFactory.fromArgs to read options from command-line
+         * Constructed StorageToRedisOptions object using the method PipelineOptionsFactory.fromArgs
+         * to read options from command-line
          */
         StorageToRedisOptions options = PipelineOptionsFactory.fromArgs(args)
                 .withValidation()
