@@ -1,4 +1,4 @@
-package com.click.example;
+package com.click.example.constants;
 
 public class PipelineConstants {
 

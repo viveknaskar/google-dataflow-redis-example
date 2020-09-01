@@ -1,4 +1,4 @@
-package com.click.example;
+package com.click.example.constants;
 
 /**
  * Enum for the Field indexes

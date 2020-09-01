@@ -1,5 +1,7 @@
 package com.click.example;
 
+import com.click.example.constants.KeyPrefix;
+import com.click.example.constants.RedisFieldIndex;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.io.redis.RedisIO;
@@ -11,8 +13,8 @@ import org.apache.beam.sdk.values.PCollection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.click.example.PipelineConstants.REDIS_KEY_SEPARATOR;
-import static com.click.example.PipelineConstants.REGEX_LINE_SPLITTER_PIPE;
+import static com.click.example.constants.PipelineConstants.REDIS_KEY_SEPARATOR;
+import static com.click.example.constants.PipelineConstants.REGEX_LINE_SPLITTER_PIPE;
 
 public class StarterPipeline {
 

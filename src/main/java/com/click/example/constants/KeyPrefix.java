@@ -1,4 +1,4 @@
-package com.click.example;
+package com.click.example.constants;
 
 /**
  * Enum to store the key prefixes in the Redis instance
