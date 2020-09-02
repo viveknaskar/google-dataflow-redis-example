@@ -78,6 +78,14 @@
             <version>2.5.0</version>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/org.sonarsource.scanner.maven/sonar-maven-plugin -->
+        <!-- The Sonarqube must be started. Default host is localhost:9000 -->
+        <dependency>
+            <groupId>org.sonarsource.scanner.maven</groupId>
+            <artifactId>sonar-maven-plugin</artifactId>
+            <version>3.6.1.1688</version>
+        </dependency>
+
         <!-- https://mvnrepository.com/artifact/org.apache.beam/beam-sdks-java-io-redis -->
         <dependency>
             <groupId>org.apache.beam</groupId>
@@ -111,4 +119,13 @@
             <version>${slf4j.version}</version>
         </dependency>
     </dependencies>
+
+    <profiles>
+        <profile>
+            <id>sonar</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+        </profile>
+    </profiles>
 </project>
