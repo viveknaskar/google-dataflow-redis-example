@@ -1,4 +1,4 @@
-package com.click.example;
+package com.click.example.functions;
 
 import org.apache.beam.sdk.io.redis.RedisConnectionConfiguration;
 import org.apache.beam.sdk.transforms.DoFn;
