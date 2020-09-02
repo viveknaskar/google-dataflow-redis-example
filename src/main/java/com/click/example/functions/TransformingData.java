@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import static com.click.example.constants.PipelineConstants.REGEX_LINE_SPLITTER_PIPE;
 
-public class TransformingDataFunction extends DoFn<String, String[]> {
+public class TransformingData extends DoFn<String, String[]> {
 
     private final Logger LOGGER = LoggerFactory.getLogger(StarterPipeline.class);
 
