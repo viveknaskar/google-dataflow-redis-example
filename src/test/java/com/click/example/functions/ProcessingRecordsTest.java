@@ -24,7 +24,7 @@ public class ProcessingRecordsTest {
             .as(StorageToRedisOptions.class);
 
     private static final String[] INPUT_DATA = new String[] {
-            "p11","xxxxxx","tony","steve","stark","26071992","4444","male"
+            "xxxxxx","p11","tony","steve","stark","26071992","4444","male","9123456789"
     };
 
     @Test
@@ -43,7 +43,8 @@ public class ProcessingRecordsTest {
                 KV.of("hash3:stark", "xxxxxx"),
                 KV.of("hash4:26071992", "xxxxxx"),
                 KV.of("hash5:4444", "xxxxxx"),
-                KV.of("hash6:male", "xxxxxx")
+                KV.of("hash6:male", "xxxxxx"),
+                KV.of("hash7:9123456789", "xxxxxx")
         );
 
         pipeline.run();

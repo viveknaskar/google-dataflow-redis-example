@@ -24,10 +24,10 @@ public class TransformingDataTest extends TestCase {
             .as(StorageToRedisOptions.class);
 
     private static final String INPUT_DATA =
-            "p11|xxxxxx|tony|steve|stark|26071992|4444|male";
+            "xxxxxx|p11|tony|steve|stark|26071992|4444|male|91234567789";
 
     private static final String[] OUTPUT_DATA = new String[] {
-            "p11","xxxxxx","tony","steve","stark","26071992","4444","male"
+            "xxxxxx","p11","tony","steve","stark","26071992","4444","male","91234567789"
     };
 
     @Test
