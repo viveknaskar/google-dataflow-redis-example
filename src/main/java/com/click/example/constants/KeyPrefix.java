@@ -10,6 +10,7 @@ public enum KeyPrefix {
     DOB("hash4"),
     POSTAL_CODE("hash5"),
     GENDER("hash6"),
+    PHONE_NUMBER("hash7"),
     GUID("hash11"),
     PPID("hash12");
 

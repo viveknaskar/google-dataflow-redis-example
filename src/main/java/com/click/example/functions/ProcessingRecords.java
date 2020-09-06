@@ -38,6 +38,10 @@ public class ProcessingRecords extends DoFn<String[], KV<String, String>>{
                     .concat(REDIS_KEY_SEPARATOR)
                     .concat(fields[RedisFieldIndex.GENDER.getValue()]), fields[RedisFieldIndex.GUID.getValue()]));
 
+            out.output(KV.of(KeyPrefix.PHONE_NUMBER.toString()
+                    .concat(REDIS_KEY_SEPARATOR)
+                    .concat(fields[RedisFieldIndex.PHONE_NUMBER.getValue()]), fields[RedisFieldIndex.GUID.getValue()]));
+
         }
     }
 }
