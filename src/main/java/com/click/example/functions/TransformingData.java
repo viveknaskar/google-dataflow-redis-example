@@ -18,9 +18,10 @@ public class TransformingData extends DoFn<String, String[]> {
          * Sample input file with missing mandatory fields is added with this repo - validationcheckmandatory.txt
          */
         if (!Strings.isNullOrEmpty(fields[RedisFieldIndex.GUID.getValue()]) &&
+                !Strings.isNullOrEmpty(fields[RedisFieldIndex.PPID.getValue()]) &&
                 !Strings.isNullOrEmpty(fields[RedisFieldIndex.FIRSTNAME.getValue()]) &&
                 !Strings.isNullOrEmpty(fields[RedisFieldIndex.LASTNAME.getValue()]) &&
-               !Strings.isNullOrEmpty(fields[RedisFieldIndex.DOB.getValue()]) &&
+                !Strings.isNullOrEmpty(fields[RedisFieldIndex.DOB.getValue()]) &&
                 !Strings.isNullOrEmpty(fields[RedisFieldIndex.POSTAL_CODE.getValue()])) {
             out.output(fields);
         }
