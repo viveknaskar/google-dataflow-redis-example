@@ -99,6 +99,14 @@
             <version>2.23.0</version>
         </dependency>
 
+        <!--Redis Mock is a simple in-memory mock of redis for java testing. It allows you to test any
+                      behaviour dependent on redis without having to deploy an instance of redis -->
+        <dependency>
+            <groupId>com.github.fppt</groupId>
+            <artifactId>jedis-mock</artifactId>
+            <version>0.1.16</version>
+        </dependency>
+
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
