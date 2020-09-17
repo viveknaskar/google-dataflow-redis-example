@@ -92,7 +92,6 @@
             <version>2.5.0</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.apache.beam/beam-sdks-java-io-redis -->
         <dependency>
             <groupId>org.apache.beam</groupId>
             <artifactId>beam-sdks-java-io-redis</artifactId>
