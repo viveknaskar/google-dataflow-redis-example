@@ -1,17 +1,20 @@
 package com.click.example;
 
-import com.click.example.functions.CustomRedisIODoFun;
-import com.click.example.functions.ProcessingPPID;
-import com.click.example.functions.ProcessingRecords;
-import com.click.example.functions.TransformingData;
+import com.click.example.functions.*;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.io.redis.RedisIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.transforms.Count;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class StarterPipeline {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(StarterPipeline.class);
+
 
     public static void main(String[] args) {
         /**
@@ -24,12 +27,14 @@ public class StarterPipeline {
 
         Pipeline p = Pipeline.create(options);
 
+        PCollection<String> lines = p.apply(
+                "ReadLines", TextIO.read().from(options.getInputFile())
+        );
+
+        lines.apply(Count.globally()).apply("Count the Total Records", ParDo.of(new CountTotalRecords()));
+
         PCollection<String[]> recordSet =
-                p.apply(
-                        "ReadLines", TextIO.read().from(options.getInputFile()))
-                          .apply(
-                            "Transform Record",
-                            ParDo.of(new TransformingData()));
+                lines.apply("Transform Record", ParDo.of(new TransformingData()));
 
         recordSet.apply(
                         "Processing Record", ParDo.of(new ProcessingRecords()))
