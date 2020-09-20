@@ -5,16 +5,21 @@ import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.io.redis.RedisIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.transforms.Count;
+import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.SerializableFunction;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PCollectionTuple;
+import org.apache.beam.sdk.values.TupleTag;
+import org.apache.beam.sdk.values.TupleTagList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class StarterPipeline {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StarterPipeline.class);
-
 
     public static void main(String[] args) {
         /**
@@ -28,10 +33,80 @@ public class StarterPipeline {
         Pipeline p = Pipeline.create(options);
 
         PCollection<String> lines = p.apply(
-                "ReadLines", TextIO.read().from(options.getInputFile())
-        );
+                "ReadLines", TextIO.read().from(ValueProvider.NestedValueProvider.of(options.getInputFile(),
+                         (SerializableFunction<String, String>) file -> file)));
 
-        lines.apply(Count.globally()).apply("Count the Total Records", ParDo.of(new CountTotalRecords()));
+        lines.apply("Counting Total records", Count.globally())
+                .apply("Logging Total Records", ParDo.of(new CountTotalRecords()));
+
+        final TupleTag<String> validRecords = new TupleTag<String>(){};
+        final TupleTag<String> invalidRecords = new TupleTag<String>(){};
+
+        PCollectionTuple mixedCollection =
+                lines.apply(ParDo
+                        .of(new DoFn<String, String>() {
+                            private Boolean isNullOrEmpty(String value) {
+                                return (value == null || value.isEmpty());
+                            }
+                            private Boolean isRecordValid(String recordLine) {
+                                if (isNullOrEmpty(recordLine)) {
+                                    return false;
+                                }
+                                String[] fields = recordLine.split("\\|");
+                                Boolean isRecordDirty = false;
+                                StringBuilder errorMessageBuilder = new StringBuilder(recordLine);
+                                errorMessageBuilder.append(" : has errors ");
+                                if(fields!=null && fields.length > 0) {
+                                    for (String field : fields) {
+                                        if(isNullOrEmpty(field)) {
+                                            isRecordDirty = true;
+                                           // errorMessageBuilder.append("| Found Empty element; ");
+                                        }
+                                    }
+                                }
+                                if(isRecordDirty) {
+                                    LOGGER.error(errorMessageBuilder.toString());
+                                }
+                                return !isRecordDirty;
+                            }
+
+                            @ProcessElement
+                            public void processElement(@Element String line, MultiOutputReceiver out) {
+                                if(isRecordValid(line)) {
+                                    out.get(validRecords).output(line);
+                                } else {
+                                    out.get(invalidRecords).output(line);
+                                }
+                            }
+                        })
+                        .withOutputTags(validRecords, TupleTagList.of(invalidRecords)));
+
+        PCollection<String> validatedRecordCollection = mixedCollection.get(validRecords);
+        PCollection<String> invalidatedRecordCollection = mixedCollection.get(invalidRecords);
+
+        validatedRecordCollection.apply("Counting Valid Records", Count.globally())
+        .apply("Logging Valid Records", ParDo.of(new DoFn<Long, Void>() {
+            @ProcessElement
+            public void processElement(@Element Long count) {
+                if(count!=null && count > 0) {
+                    LOGGER.info("Total Valid Records : " + count);
+                } else {
+                    LOGGER.info("No valid Records :");
+                }
+            }
+        }));
+
+        invalidatedRecordCollection.apply("Counting Invalid Records", Count.globally())
+                .apply("Logging Invalid Records", ParDo.of(new DoFn<Long, Void>() {
+                    @ProcessElement
+                    public void processElement(@Element Long count) {
+                        if(count!=null && count > 0) {
+                            LOGGER.info("Total Invalid Records : " + count);
+                        } else {
+                            LOGGER.info("No Invalid Records :");
+                        }
+                    }
+                }));
 
         PCollection<String[]> recordSet =
                 lines.apply("Transform Record", ParDo.of(new TransformingData()));
