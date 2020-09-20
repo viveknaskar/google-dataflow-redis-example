@@ -17,6 +17,8 @@ import org.apache.beam.sdk.values.TupleTagList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.click.example.constants.PipelineConstants.REGEX_LINE_SPLITTER_PIPE;
+
 public class StarterPipeline {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StarterPipeline.class);
@@ -37,7 +39,7 @@ public class StarterPipeline {
                          (SerializableFunction<String, String>) file -> file)));
 
         lines.apply("Counting Total records", Count.globally())
-                .apply("Logging Total Records", ParDo.of(new CountTotalRecords()));
+                .apply("Logging Total Records", ParDo.of(new LogTotalRecords()));
 
         final TupleTag<String> validRecords = new TupleTag<String>(){};
         final TupleTag<String> invalidRecords = new TupleTag<String>(){};
@@ -52,15 +54,14 @@ public class StarterPipeline {
                                 if (isNullOrEmpty(recordLine)) {
                                     return false;
                                 }
-                                String[] fields = recordLine.split("\\|");
+                                String[] fields = recordLine.split(REGEX_LINE_SPLITTER_PIPE);
                                 Boolean isRecordDirty = false;
                                 StringBuilder errorMessageBuilder = new StringBuilder(recordLine);
-                                errorMessageBuilder.append(" : has errors ");
+                                errorMessageBuilder.append(" : is invalid!");
                                 if(fields!=null && fields.length > 0) {
                                     for (String field : fields) {
                                         if(isNullOrEmpty(field)) {
                                             isRecordDirty = true;
-                                           // errorMessageBuilder.append("| Found Empty element; ");
                                         }
                                     }
                                 }
@@ -82,38 +83,20 @@ public class StarterPipeline {
                         .withOutputTags(validRecords, TupleTagList.of(invalidRecords)));
 
         PCollection<String> validatedRecordCollection = mixedCollection.get(validRecords);
+
         PCollection<String> invalidatedRecordCollection = mixedCollection.get(invalidRecords);
 
         validatedRecordCollection.apply("Counting Valid Records", Count.globally())
-        .apply("Logging Valid Records", ParDo.of(new DoFn<Long, Void>() {
-            @ProcessElement
-            public void processElement(@Element Long count) {
-                if(count!=null && count > 0) {
-                    LOGGER.info("Total Valid Records : " + count);
-                } else {
-                    LOGGER.info("No valid Records :");
-                }
-            }
-        }));
+                .apply("Logging Valid Records", ParDo.of(new LogValidRecords()));
 
         invalidatedRecordCollection.apply("Counting Invalid Records", Count.globally())
-                .apply("Logging Invalid Records", ParDo.of(new DoFn<Long, Void>() {
-                    @ProcessElement
-                    public void processElement(@Element Long count) {
-                        if(count!=null && count > 0) {
-                            LOGGER.info("Total Invalid Records : " + count);
-                        } else {
-                            LOGGER.info("No Invalid Records :");
-                        }
-                    }
-                }));
+                .apply("Logging Invalid Records", ParDo.of(new LogInvalidRecords()));
 
         PCollection<String[]> recordSet =
                 lines.apply("Transform Record", ParDo.of(new TransformingData()));
 
-        recordSet.apply(
-                        "Processing Record", ParDo.of(new ProcessingRecords()))
-                        .apply("Writing field indexes into redis",
+        recordSet.apply("Processing Record", ParDo.of(new ProcessingRecords()))
+                .apply("Writing field indexes into redis",
                         RedisIO.write().withMethod(RedisIO.Write.Method.SADD)
                                 .withEndpoint(options.getRedisHost(), options.getRedisPort()));
 
@@ -121,6 +104,7 @@ public class StarterPipeline {
                 "Processing Payroll Provider ID",
                 ParDo.of(new ProcessingPPID())).apply("Writing Hash Data into Redis",
                 ParDo.of(new CustomRedisIODoFun(options.getRedisHost(), options.getRedisPort())));
+
         p.run();
     }
 }
