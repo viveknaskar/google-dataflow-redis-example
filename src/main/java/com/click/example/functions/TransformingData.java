@@ -34,8 +34,6 @@ public class TransformingData extends DoFn<String, String[]> {
 
         } else {
 
-            LOGGER.info("Validation failed for GUID: " + fields[RedisFieldIndex.GUID.getValue()] + " and the line is: " + line);
-
             if (Strings.isNullOrEmpty(fields[RedisFieldIndex.GUID.getValue()])){
                 reason.append("Validation failed due to GUID empty or null" );
             }
@@ -54,7 +52,9 @@ public class TransformingData extends DoFn<String, String[]> {
                 reason.append("Validation failed due to Postal Code empty or null" );
             }
 
-            LOGGER.info(reason.toString());
+            LOGGER.error("Validation failed for line with GUID: " + fields[RedisFieldIndex.GUID.getValue()] +
+                            " | PPID: " + fields[RedisFieldIndex.PPID.getValue()] +
+                    " | Errors: " + reason.toString());
 
         }
 

@@ -2,18 +2,13 @@ package com.click.example;
 
 import com.click.example.functions.*;
 import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.FileIO;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.io.redis.RedisIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.options.ValueProvider;
-import org.apache.beam.sdk.transforms.Count;
-import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.SerializableFunction;
-import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PCollectionTuple;
-import org.apache.beam.sdk.values.TupleTag;
-import org.apache.beam.sdk.values.TupleTagList;
+import org.apache.beam.sdk.transforms.*;
+import org.apache.beam.sdk.values.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,12 +32,32 @@ public class StarterPipeline {
         PCollection<String> lines = p.apply(
                 "ReadLines", TextIO.read().from(ValueProvider.NestedValueProvider.of(options.getInputFile(),
                          (SerializableFunction<String, String>) file -> file)));
-
-        lines.apply("Counting Total records", Count.globally())
+        /**
+         * Count the number of records, Count.globally() must be used
+         */
+        PCollection<String> totalCount = lines.apply("Counting Total records", Count.globally())
                 .apply("Logging Total Records", ParDo.of(new LogTotalRecords()));
 
-        final TupleTag<String> validRecords = new TupleTag<String>(){};
-        final TupleTag<String> invalidRecords = new TupleTag<String>(){};
+        /**
+         * Transform to get the name of filename
+         */
+        PCollection<String> filenameList =
+                p.apply("Get the Filename", FileIO.match().filepattern(options.getInputFile()))
+                        .apply(FileIO.readMatches())
+                        .apply(MapElements.into(TypeDescriptors.strings())
+                                .via((FileIO.ReadableFile file) -> {
+                                    String f = file.getMetadata().resourceId().getFilename();
+                                    LOGGER.info(" filename is: " + f);
+                                    return f;
+                                }));
+
+        /**
+         *  Pipeline for a transform that will count the number of success and failed records
+         *  that produces two collections, i.e., validatedRecordCollection and invalidatedRecordCollection
+         */
+
+        final TupleTag<String> validRecords = new TupleTag<>(){};
+        final TupleTag<String> invalidRecords = new TupleTag<>(){};
 
         PCollectionTuple mixedCollection =
                 lines.apply(ParDo
@@ -56,17 +71,13 @@ public class StarterPipeline {
                                 }
                                 String[] fields = recordLine.split(REGEX_LINE_SPLITTER_PIPE);
                                 Boolean isRecordDirty = false;
-                                StringBuilder errorMessageBuilder = new StringBuilder(recordLine);
-                                errorMessageBuilder.append(" : is invalid!");
-                                if(fields!=null && fields.length > 0) {
+
+                                if(fields != null && fields.length > 0) {
                                     for (String field : fields) {
                                         if(isNullOrEmpty(field)) {
                                             isRecordDirty = true;
                                         }
                                     }
-                                }
-                                if(isRecordDirty) {
-                                    LOGGER.error(errorMessageBuilder.toString());
                                 }
                                 return !isRecordDirty;
                             }
@@ -86,11 +97,37 @@ public class StarterPipeline {
 
         PCollection<String> invalidatedRecordCollection = mixedCollection.get(invalidRecords);
 
-        validatedRecordCollection.apply("Counting Valid Records", Count.globally())
+        /**
+         * Transform to count the number of valid records
+         */
+        PCollection<String> validCount = validatedRecordCollection.apply("Counting Valid Records", Count.globally())
                 .apply("Logging Valid Records", ParDo.of(new LogValidRecords()));
 
-        invalidatedRecordCollection.apply("Counting Invalid Records", Count.globally())
+        /**
+         * Transform to count the number of invalid records
+         */
+        PCollection<String> invalidCount = invalidatedRecordCollection.apply("Counting Invalid Records", Count.globally())
                 .apply("Logging Invalid Records", ParDo.of(new LogInvalidRecords()));
+
+        PCollectionList<String> collectionList = PCollectionList.of(filenameList).and(validCount).and(invalidCount).and(totalCount);
+
+        PCollection<String> mergedCollectionWithFlatten = collectionList
+                .apply(Flatten.pCollections());
+
+        mergedCollectionWithFlatten.apply("Custom Combine",
+                Combine.globally(new CombiningTransforms())).apply(ParDo.of(new DoFn<String, Void>() {
+            StringBuilder msg = new StringBuilder();
+            @ProcessElement
+            public void processElement(@Element String count) {
+                if(count!=null && count.length() > 0) {
+                    msg.append(count);
+                    LOGGER.info("Processing completed: "+ msg);
+                } else {
+                    msg.append(count);
+                    LOGGER.info("Processing failed.");
+                }
+            }
+        }));
 
         PCollection<String[]> recordSet =
                 lines.apply("Transform Record", ParDo.of(new TransformingData()));
@@ -105,6 +142,8 @@ public class StarterPipeline {
                 ParDo.of(new ProcessingPPID())).apply("Writing Hash Data into Redis",
                 ParDo.of(new CustomRedisIODoFun(options.getRedisHost(), options.getRedisPort())));
 
-        p.run();
+       p.run();
+
+
     }
 }
