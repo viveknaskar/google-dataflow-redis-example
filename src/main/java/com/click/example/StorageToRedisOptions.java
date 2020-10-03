@@ -22,15 +22,15 @@ public interface StorageToRedisOptions extends PipelineOptions {
      */
     @Description("Redis host")
     @Default.String("DEFAULT")
-    String getRedisHost();
-    void setRedisHost(String value);
+    ValueProvider<String> getRedisHost();
+    void setRedisHost(ValueProvider<String> value);
 
     /**
      * Memorystore/Redis instance port. The default port for Redis is 6379
      */
     @Description("Redis port")
     @Default.Integer(6379)
-    Integer getRedisPort();
-    void setRedisPort(Integer value);
+    ValueProvider<Integer> getRedisPort();
+    void setRedisPort(ValueProvider<Integer> value);
 
 }

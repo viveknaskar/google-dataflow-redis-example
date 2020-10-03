@@ -3,17 +3,13 @@ package com.click.example;
 import com.click.example.functions.*;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;
+import org.apache.beam.sdk.io.redis.RedisConnectionConfiguration;
 import org.apache.beam.sdk.io.redis.RedisIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
-import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.transforms.Count;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.SerializableFunction;
-import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PCollectionTuple;
-import org.apache.beam.sdk.values.TupleTag;
-import org.apache.beam.sdk.values.TupleTagList;
+import org.apache.beam.sdk.values.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,8 +31,7 @@ public class StarterPipeline {
         Pipeline p = Pipeline.create(options);
 
         PCollection<String> lines = p.apply(
-                "ReadLines", TextIO.read().from(ValueProvider.NestedValueProvider.of(options.getInputFile(),
-                         (SerializableFunction<String, String>) file -> file)));
+                "ReadLines", TextIO.read().from(options.getInputFile()));
 
         lines.apply("Counting Total records", Count.globally())
                 .apply("Logging Total Records", ParDo.of(new LogTotalRecords()));
@@ -95,15 +90,22 @@ public class StarterPipeline {
         PCollection<String[]> recordSet =
                 lines.apply("Transform Record", ParDo.of(new TransformingData()));
 
-        recordSet.apply("Processing Record", ParDo.of(new ProcessingRecords()))
-                .apply("Writing field indexes into redis",
-                        RedisIO.write().withMethod(RedisIO.Write.Method.SADD)
-                                .withEndpoint(options.getRedisHost(), options.getRedisPort()));
+        PCollection<KV<String, String>> guidDataSet =
+                recordSet.apply("Processing Record", ParDo.of(new ProcessingRecords()));
 
-        recordSet.apply(
-                "Processing Payroll Provider ID",
-                ParDo.of(new ProcessingPPID())).apply("Writing Hash Data into Redis",
-                ParDo.of(new CustomRedisIODoFun(options.getRedisHost(), options.getRedisPort())));
+        guidDataSet.apply(
+                "Creating GUID index",
+                RedisIO.write().withMethod(RedisIO.Write.Method.SADD)
+                        .withConnectionConfiguration(RedisConnectionConfiguration
+                        .create(options.getRedisHost(), options.getRedisPort())));
+
+        PCollection<KV<String, KV<String, String>>> ppidDataSet =
+                recordSet.apply("Processing Payroll Provider ID", ParDo.of(new ProcessingPPID()));
+
+        ppidDataSet.apply(
+                "Creating PPID index",
+                RedisHashIO.write().withConnectionConfiguration(RedisConnectionConfiguration
+                        .create(options.getRedisHost(), options.getRedisPort())));
 
         p.run();
     }
