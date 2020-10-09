@@ -41,40 +41,7 @@ public class StarterPipeline {
 
         PCollectionTuple mixedCollection =
                 lines.apply(ParDo
-                        .of(new DoFn<String, String>() {
-                            private Boolean isNullOrEmpty(String value) {
-                                return (value == null || value.isEmpty());
-                            }
-                            private Boolean isRecordValid(String recordLine) {
-                                if (isNullOrEmpty(recordLine)) {
-                                    return false;
-                                }
-                                String[] fields = recordLine.split(REGEX_LINE_SPLITTER_PIPE);
-                                Boolean isRecordDirty = false;
-                                StringBuilder errorMessageBuilder = new StringBuilder(recordLine);
-                                errorMessageBuilder.append(" : is invalid!");
-                                if(fields!=null && fields.length > 0) {
-                                    for (String field : fields) {
-                                        if(isNullOrEmpty(field)) {
-                                            isRecordDirty = true;
-                                        }
-                                    }
-                                }
-                                if(isRecordDirty) {
-                                    LOGGER.error(errorMessageBuilder.toString());
-                                }
-                                return !isRecordDirty;
-                            }
-
-                            @ProcessElement
-                            public void processElement(@Element String line, MultiOutputReceiver out) {
-                                if(isRecordValid(line)) {
-                                    out.get(validRecords).output(line);
-                                } else {
-                                    out.get(invalidRecords).output(line);
-                                }
-                            }
-                        })
+                        .of(new SortRecords(validRecords, invalidRecords))
                         .withOutputTags(validRecords, TupleTagList.of(invalidRecords)));
 
         PCollection<String> validatedRecordCollection = mixedCollection.get(validRecords);
