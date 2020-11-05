@@ -29,6 +29,16 @@ public class StarterPipeline {
 
         PCollection<String> lines = p.apply(
                 "ReadLines", TextIO.read().from(options.getInputFile()));
+
+
+        /**
+         * Flushing the Memorystore if there are records in the input file
+         */
+         PCollection<String> flushFlag = lines.apply("Checking Data in input file", Count.globally())
+                                            .apply("Flushing the data store", FlushingMemorystore.read()
+                                                    .withConnectionConfiguration(RedisConnectionConfiguration
+                                                        .create(options.getRedisHost(), options.getRedisPort())));
+
         /**
          * Count the number of records, Count.globally() must be used
          */
@@ -89,8 +99,8 @@ public class StarterPipeline {
         PCollection<KV<String, String>> guidDataSet =
                 recordSet.apply("Processing Record", ParDo.of(new ProcessingRecords()));
 
-        guidDataSet.apply(
-                "Creating GUID index",
+        guidDataSet.apply(Wait.on(flushFlag))
+                .apply("Creating GUID index",
                 RedisIO.write().withMethod(RedisIO.Write.Method.SADD)
                         .withConnectionConfiguration(RedisConnectionConfiguration
                         .create(options.getRedisHost(), options.getRedisPort())));
@@ -98,8 +108,8 @@ public class StarterPipeline {
         PCollection<KV<String, KV<String, String>>> ppidDataSet =
                 recordSet.apply("Processing Payroll Provider ID", ParDo.of(new ProcessingPPID()));
 
-        ppidDataSet.apply(
-                "Creating PPID index",
+        ppidDataSet.apply(Wait.on(flushFlag))
+                .apply("Creating PPID index",
                 RedisHashIO.write().withConnectionConfiguration(RedisConnectionConfiguration
                         .create(options.getRedisHost(), options.getRedisPort())));
 
