@@ -109,6 +109,7 @@ public class FlushingMemorystore extends DoFn<Long, String> {
                     out.output("SUCCESS");
                 } else {
                     LOGGER.info("No Records are there in the input file");
+                    out.output("FAILURE");
                 }
 
             }
