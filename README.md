@@ -20,6 +20,8 @@ mvn compile exec:java \
   --gcpTempLocation=gs://cloud-dataflow-pipeline-bucket/tmp/ \
   --runner=DataflowRunner"
 ```  
+### Note: 
+Before running the dataflow command, make sure that the storage buckets are created. Storage buckets are global, so no two buckets can be created with the same name.
 
 ## Check the data inserted in Memorystore (Redis) datastore
 For checking whether the processed data is stored in the Redis instance after the dataflow pipeline is executed successfully, you must first connect to the Redis instance from any Compute Engine VM instance located within the same project, region and network as the Redis instance.
