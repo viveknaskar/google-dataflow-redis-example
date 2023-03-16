@@ -42,8 +42,9 @@
                     <target>11</target>
                 </configuration>
             </plugin>
+
             <!-- The Sonarqube must be started. Default host is localhost:9000 -->
-            <plugin>
+            <!--<plugin>
                 <groupId>org.sonarsource.scanner.maven</groupId>
                 <artifactId>sonar-maven-plugin</artifactId>
                 <version>3.6.0.1398</version>
@@ -55,7 +56,8 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>
+            </plugin>-->
+
         </plugins>
 
         <pluginManagement>
