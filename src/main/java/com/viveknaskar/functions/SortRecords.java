@@ -1,13 +1,13 @@
-package com.click.example.functions;
+package com.viveknaskar.functions;
 
-import com.click.example.constants.RedisFieldIndex;
+import com.viveknaskar.constants.RedisFieldIndex;
 import com.google.api.client.util.Strings;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.TupleTag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.click.example.constants.PipelineConstants.REGEX_LINE_SPLITTER_PIPE;
+import static com.viveknaskar.constants.PipelineConstants.REGEX_LINE_SPLITTER_PIPE;
 
 public class SortRecords extends DoFn<String, String> {
 

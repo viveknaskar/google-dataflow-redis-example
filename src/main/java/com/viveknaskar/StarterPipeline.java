@@ -1,6 +1,6 @@
-package com.click.example;
+package com.viveknaskar;
 
-import com.click.example.functions.*;
+import com.viveknaskar.functions.*;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.FileIO;
 import org.apache.beam.sdk.io.TextIO;

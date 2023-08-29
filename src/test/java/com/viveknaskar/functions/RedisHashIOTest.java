@@ -1,4 +1,4 @@
-package com.click.example.functions;
+package com.viveknaskar.functions;
 
 import com.github.fppt.jedismock.RedisServer;
 import org.apache.beam.sdk.io.redis.RedisConnectionConfiguration;
@@ -54,9 +54,6 @@ public class RedisHashIOTest {
         String ppid = client.hget("hash11:bbbbbb", "hash12");
         Assert.assertEquals(ppid, "p11");
 
-
-
     }
-
 
 }
