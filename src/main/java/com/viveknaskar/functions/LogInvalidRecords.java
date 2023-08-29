@@ -1,4 +1,4 @@
-package com.click.example.functions;
+package com.viveknaskar.functions;
 
 import org.apache.beam.sdk.transforms.DoFn;
 import org.slf4j.Logger;

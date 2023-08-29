@@ -1,8 +1,8 @@
-package com.click.example.functions;
+package com.viveknaskar.functions;
 
 import org.apache.beam.sdk.transforms.DoFn;
 
-import static com.click.example.constants.PipelineConstants.REGEX_LINE_SPLITTER_PIPE;
+import static com.viveknaskar.constants.PipelineConstants.REGEX_LINE_SPLITTER_PIPE;
 
 public class TransformingData extends DoFn<String, String[]> {
 

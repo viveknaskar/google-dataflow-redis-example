@@ -1,4 +1,4 @@
-package com.click.example.functions;
+package com.viveknaskar.functions;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 import com.google.auto.value.AutoValue;
@@ -6,26 +6,26 @@ import org.apache.beam.sdk.io.redis.RedisConnectionConfiguration;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PDone;
 import org.apache.beam.vendor.grpc.v1p26p0.com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.Pipeline;
 
-public class RedisHashIO {
+public class FlushingMemorystore extends DoFn<Long, String> {
 
-    public static RedisHashIO.Write write() {
+    private static final Logger LOGGER = LoggerFactory.getLogger(FlushingMemorystore.class);
 
-        return (new AutoValue_RedisHashIO_Write.Builder())
+    public static FlushingMemorystore.Read read() {
+        return (new AutoValue_FlushingMemorystore_Read.Builder())
                 .setConnectionConfiguration(RedisConnectionConfiguration.create()).build();
-
     }
 
     @AutoValue
-    public abstract static class Write extends PTransform<PCollection<KV<String, KV<String, String>>>, PDone> {
+    public abstract static class Read extends PTransform<PCollection<Long>, PCollection<String>> {
 
-        public Write() {
+        public Read() {
         }
 
         @Nullable
@@ -33,50 +33,53 @@ public class RedisHashIO {
 
         @Nullable
         abstract Long expireTime();
+        abstract FlushingMemorystore.Read.Builder toBuilder();
 
-        abstract RedisHashIO.Write.Builder toBuilder();
-
-        public RedisHashIO.Write withEndpoint(String host, int port) {
+        public FlushingMemorystore.Read withEndpoint(String host, int port) {
             Preconditions.checkArgument(host != null, "host cannot be null");
             Preconditions.checkArgument(port > 0, "port cannot be negative or 0");
             return this.toBuilder().setConnectionConfiguration(this.connectionConfiguration().withHost(host).withPort(port)).build();
         }
 
-        public RedisHashIO.Write withAuth(String auth) {
+        public FlushingMemorystore.Read withAuth(String auth) {
             Preconditions.checkArgument(auth != null, "auth cannot be null");
             return this.toBuilder().setConnectionConfiguration(this.connectionConfiguration().withAuth(auth)).build();
         }
 
-        public RedisHashIO.Write withTimeout(int timeout) {
+        public FlushingMemorystore.Read withTimeout(int timeout) {
             Preconditions.checkArgument(timeout >= 0, "timeout cannot be negative");
             return this.toBuilder().setConnectionConfiguration(this.connectionConfiguration().withTimeout(timeout)).build();
         }
 
-        public RedisHashIO.Write withConnectionConfiguration(RedisConnectionConfiguration connectionConfiguration) {
+        public FlushingMemorystore.Read withConnectionConfiguration(RedisConnectionConfiguration connectionConfiguration) {
             Preconditions.checkArgument(connectionConfiguration != null, "connection cannot be null");
             return this.toBuilder().setConnectionConfiguration(connectionConfiguration).build();
         }
 
-        public RedisHashIO.Write withExpireTime(Long expireTimeMillis) {
+        public FlushingMemorystore.Read withExpireTime(Long expireTimeMillis) {
             Preconditions.checkArgument(expireTimeMillis != null, "expireTimeMillis cannot be null");
             Preconditions.checkArgument(expireTimeMillis > 0L, "expireTimeMillis cannot be negative or 0");
             return this.toBuilder().setExpireTime(expireTimeMillis).build();
         }
 
-        public PDone expand(PCollection<KV<String, KV<String, String>>> input) {
+        public PCollection<String> expand(PCollection<Long> input) {
             Preconditions.checkArgument(this.connectionConfiguration() != null, "withConnectionConfiguration() is required");
-            input.apply(ParDo.of(new RedisHashIO.Write.WriteFn(this)));
-            return PDone.in(input.getPipeline());
+           return input.apply(ParDo.of(new FlushingMemorystore.Read.ReadFn(this)));
         }
 
-        private static class WriteFn extends DoFn<KV<String, KV<String, String>>, Void> {
+        @Setup
+        public Jedis setup() {
+            return this.connectionConfiguration().connect();
+        }
+
+        private static class ReadFn extends DoFn<Long, String> {
             private static final int DEFAULT_BATCH_SIZE = 1000;
-            private final RedisHashIO.Write spec;
+            private final FlushingMemorystore.Read spec;
             private transient Jedis jedis;
             private transient Pipeline pipeline;
             private int batchCount;
 
-            public WriteFn(RedisHashIO.Write spec) {
+            public ReadFn(FlushingMemorystore.Read spec) {
                 this.spec = spec;
             }
 
@@ -93,28 +96,21 @@ public class RedisHashIO {
             }
 
             @ProcessElement
-            public void processElement(DoFn<KV<String, KV<String, String>>, Void>.ProcessContext c) {
-                KV<String, KV<String, String>> record = c.element();
-
-                writeRecord(record);
-
+            public void processElement(@Element Long count, OutputReceiver<String> out) {
                 batchCount++;
 
-                if (batchCount >= DEFAULT_BATCH_SIZE) {
-                    pipeline.exec();
-                    pipeline.sync();
-                    pipeline.multi();
-                    batchCount = 0;
+                if(count!=null && count > 0) {
+                    if (pipeline.isInMulti()) {
+                        pipeline.exec();
+                        pipeline.sync();
+                        jedis.flushDB();
+                        LOGGER.info("*****The memorystore is flushed*****");
+                    }
+                    out.output("SUCCESS");
+                } else {
+                    LOGGER.info("No Records are there in the input file");
+                    out.output("FAILURE");
                 }
-            }
-
-            private void writeRecord(KV<String, KV<String, String>> record) {
-                String hashKey = record.getKey();
-                KV<String, String> hashValue = record.getValue();
-                String fieldKey = hashValue.getKey();
-                String value = hashValue.getValue();
-
-                pipeline.hset(hashKey, fieldKey, value);
 
             }
 
@@ -124,7 +120,7 @@ public class RedisHashIO {
                     this.pipeline.exec();
                     this.pipeline.sync();
                 }
-                this.batchCount = 0;
+                this.batchCount=0;
             }
 
             @Teardown
@@ -140,11 +136,11 @@ public class RedisHashIO {
             Builder() {
             }
 
-            abstract RedisHashIO.Write.Builder setExpireTime(Long expireTimeMillis);
+            abstract FlushingMemorystore.Read.Builder setExpireTime(Long expireTimeMillis);
 
-            abstract RedisHashIO.Write build();
+            abstract FlushingMemorystore.Read build();
 
-            abstract RedisHashIO.Write.Builder setConnectionConfiguration(RedisConnectionConfiguration connectionConfiguration);
+          abstract FlushingMemorystore.Read.Builder setConnectionConfiguration(RedisConnectionConfiguration connectionConfiguration);
 
         }
 

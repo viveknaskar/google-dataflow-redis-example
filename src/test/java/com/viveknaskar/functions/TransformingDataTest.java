@@ -1,7 +1,6 @@
-package com.click.example.functions;
+package com.viveknaskar.functions;
 
-import com.click.example.StorageToRedisOptions;
-import junit.framework.TestCase;
+import com.viveknaskar.StorageToRedisOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
@@ -15,7 +14,7 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
-public class TransformingDataTest extends TestCase {
+public class TransformingDataTest {
 
     @Rule
     public final transient TestPipeline pipeline = TestPipeline.create();
