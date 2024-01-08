@@ -19,7 +19,7 @@ public class TransformingDataTest {
     @Rule
     public final transient TestPipeline pipeline = TestPipeline.create();
 
-    private static StorageToRedisOptions options = PipelineOptionsFactory.create()
+    private static final StorageToRedisOptions options = PipelineOptionsFactory.create()
             .as(StorageToRedisOptions.class);
 
     private static final String INPUT_DATA =
