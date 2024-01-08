@@ -11,8 +11,10 @@ import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 import redis.clients.jedis.Jedis;
 
+import java.util.Set;
+
 @RunWith(MockitoJUnitRunner.class)
-public class RedisHashIOTest {
+public class WritingInMemoryStoreTest {
 
     private static final String REDIS_HOST = "localhost";
 
@@ -39,21 +41,21 @@ public class RedisHashIOTest {
     }
 
     @Test
-    public void TestWriteHashWithConfig() {
+    public void testWriteHashWithConfig() {
         KV<String, String> fieldValue = KV.of("hash12", "p11");
-        KV<String, KV<String, String>> record = KV.of("hash11:bbbbbb", fieldValue );
+        KV<String, KV<String, String>> record = KV.of("hash11:bbbbbb", fieldValue);
 
         PCollection<KV<String, KV<String, String>>> write = pipeline.apply(Create.of(record));
 
-        write.apply("Writing Hash into Redis", RedisHashIO.write()
+        write.apply("Writing Hash into Redis", WritingInMemoryStore.write()
                 .withConnectionConfiguration(RedisConnectionConfiguration
-                .create(REDIS_HOST, port)));
+                        .create(REDIS_HOST, port)));
 
         pipeline.run();
 
-        String ppid = client.hget("hash11:bbbbbb", "hash12");
-        Assert.assertEquals(ppid, "p11");
-
+        Set<String> members = client.smembers("hash11:bbbbbb");
+        boolean isMember = members.contains("hash12");
+        Assert.assertTrue("The record should be a member in the set", isMember);
     }
 
 }

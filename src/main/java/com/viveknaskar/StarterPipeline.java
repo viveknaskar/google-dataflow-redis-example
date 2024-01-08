@@ -35,7 +35,7 @@ public class StarterPipeline {
          * Flushing the Memorystore if there are records in the input file
          */
          PCollection<String> flushFlag = lines.apply("Checking Data in input file", Count.globally())
-                                            .apply("Flushing the data store", FlushingMemorystore.read()
+                                            .apply("Flushing the data store", FlushingMemoryStore.read()
                                                     .withConnectionConfiguration(RedisConnectionConfiguration
                                                         .create(options.getRedisHost(), options.getRedisPort())));
 
@@ -110,7 +110,7 @@ public class StarterPipeline {
 
         ppidDataSet.apply(Wait.on(flushFlag))
                 .apply("Creating PPID index",
-                RedisHashIO.write().withConnectionConfiguration(RedisConnectionConfiguration
+                WritingInMemoryStore.write().withConnectionConfiguration(RedisConnectionConfiguration
                         .create(options.getRedisHost(), options.getRedisPort())));
 
         p.run();
