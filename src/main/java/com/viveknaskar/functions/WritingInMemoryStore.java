@@ -1,6 +1,7 @@
 package com.viveknaskar.functions;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Preconditions;
 import org.apache.beam.sdk.io.redis.RedisConnectionConfiguration;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
@@ -8,7 +9,6 @@ import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PDone;
-import org.apache.beam.vendor.grpc.v1p54p0.com.google.common.base.Preconditions;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.Transaction;
@@ -16,17 +16,14 @@ import redis.clients.jedis.Transaction;
 public class WritingInMemoryStore {
 
     public static WritingInMemoryStore.Write write() {
-
         return (new AutoValue_WritingInMemoryStore_Write.Builder())
                 .setConnectionConfiguration(RedisConnectionConfiguration.create()).build();
-
     }
 
     @AutoValue
     public abstract static class Write extends PTransform<PCollection<KV<String, KV<String, String>>>, PDone> {
 
-        public Write() {
-        }
+        public Write() {}
 
         @Nullable
         abstract RedisConnectionConfiguration connectionConfiguration();

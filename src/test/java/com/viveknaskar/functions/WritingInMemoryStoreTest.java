@@ -11,6 +11,7 @@ import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 import redis.clients.jedis.Jedis;
 
+import java.io.IOException;
 import java.util.Set;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -35,7 +36,7 @@ public class WritingInMemoryStoreTest {
     }
 
     @AfterClass
-    public static void afterClass() {
+    public static void afterClass() throws IOException {
         client.close();
         server.stop();
     }
