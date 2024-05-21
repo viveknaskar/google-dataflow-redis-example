@@ -42,7 +42,7 @@ For checking whether the processed data is stored in the Redis instance after th
 ```
 
 ## References
-https://thedeveloperstory.com/2020/07/24/cloud-dataflow-a-unified-model-for-batch-and-streaming-data-processing/
+https://thedeveloperstory.com/2020/07/23/cloud-dataflow-a-unified-model-for-batch-and-streaming-data-processing/
 
 https://thedeveloperstory.com/2020/07/28/the-technology-behind-spotify-wrapped-2019/
 
