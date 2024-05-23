@@ -1,7 +1,7 @@
 package com.viveknaskar.functions;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Preconditions;
 import org.apache.beam.sdk.io.redis.RedisConnectionConfiguration;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
@@ -9,24 +9,21 @@ import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PDone;
-import org.apache.beam.vendor.grpc.v1p26p0.com.google.common.base.Preconditions;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import redis.clients.jedis.Jedis;
-import redis.clients.jedis.Pipeline;
+import redis.clients.jedis.Transaction;
 
-public class RedisHashIO {
+public class WritingInMemoryStore {
 
-    public static RedisHashIO.Write write() {
-
-        return (new AutoValue_RedisHashIO_Write.Builder())
+    public static WritingInMemoryStore.Write write() {
+        return (new AutoValue_WritingInMemoryStore_Write.Builder())
                 .setConnectionConfiguration(RedisConnectionConfiguration.create()).build();
-
     }
 
     @AutoValue
     public abstract static class Write extends PTransform<PCollection<KV<String, KV<String, String>>>, PDone> {
 
-        public Write() {
-        }
+        public Write() {}
 
         @Nullable
         abstract RedisConnectionConfiguration connectionConfiguration();
@@ -34,30 +31,30 @@ public class RedisHashIO {
         @Nullable
         abstract Long expireTime();
 
-        abstract RedisHashIO.Write.Builder toBuilder();
+        abstract WritingInMemoryStore.Write.Builder toBuilder();
 
-        public RedisHashIO.Write withEndpoint(String host, int port) {
+        public WritingInMemoryStore.Write withEndpoint(String host, int port) {
             Preconditions.checkArgument(host != null, "host cannot be null");
             Preconditions.checkArgument(port > 0, "port cannot be negative or 0");
             return this.toBuilder().setConnectionConfiguration(this.connectionConfiguration().withHost(host).withPort(port)).build();
         }
 
-        public RedisHashIO.Write withAuth(String auth) {
+        public WritingInMemoryStore.Write withAuth(String auth) {
             Preconditions.checkArgument(auth != null, "auth cannot be null");
             return this.toBuilder().setConnectionConfiguration(this.connectionConfiguration().withAuth(auth)).build();
         }
 
-        public RedisHashIO.Write withTimeout(int timeout) {
+        public WritingInMemoryStore.Write withTimeout(int timeout) {
             Preconditions.checkArgument(timeout >= 0, "timeout cannot be negative");
             return this.toBuilder().setConnectionConfiguration(this.connectionConfiguration().withTimeout(timeout)).build();
         }
 
-        public RedisHashIO.Write withConnectionConfiguration(RedisConnectionConfiguration connectionConfiguration) {
+        public WritingInMemoryStore.Write withConnectionConfiguration(RedisConnectionConfiguration connectionConfiguration) {
             Preconditions.checkArgument(connectionConfiguration != null, "connection cannot be null");
             return this.toBuilder().setConnectionConfiguration(connectionConfiguration).build();
         }
 
-        public RedisHashIO.Write withExpireTime(Long expireTimeMillis) {
+        public WritingInMemoryStore.Write withExpireTime(Long expireTimeMillis) {
             Preconditions.checkArgument(expireTimeMillis != null, "expireTimeMillis cannot be null");
             Preconditions.checkArgument(expireTimeMillis > 0L, "expireTimeMillis cannot be negative or 0");
             return this.toBuilder().setExpireTime(expireTimeMillis).build();
@@ -65,18 +62,18 @@ public class RedisHashIO {
 
         public PDone expand(PCollection<KV<String, KV<String, String>>> input) {
             Preconditions.checkArgument(this.connectionConfiguration() != null, "withConnectionConfiguration() is required");
-            input.apply(ParDo.of(new RedisHashIO.Write.WriteFn(this)));
+            input.apply(ParDo.of(new WritingInMemoryStore.Write.WriteFn(this)));
             return PDone.in(input.getPipeline());
         }
 
         private static class WriteFn extends DoFn<KV<String, KV<String, String>>, Void> {
             private static final int DEFAULT_BATCH_SIZE = 1000;
-            private final RedisHashIO.Write spec;
+            private final WritingInMemoryStore.Write spec;
             private transient Jedis jedis;
-            private transient Pipeline pipeline;
+            private transient @Nullable Transaction transaction;
             private int batchCount;
 
-            public WriteFn(RedisHashIO.Write spec) {
+            public WriteFn(WritingInMemoryStore.Write spec) {
                 this.spec = spec;
             }
 
@@ -87,9 +84,8 @@ public class RedisHashIO {
 
             @StartBundle
             public void startBundle() {
-                this.pipeline = this.jedis.pipelined();
-                this.pipeline.multi();
-                this.batchCount = 0;
+                transaction = jedis.multi();
+                batchCount = 0;
             }
 
             @ProcessElement
@@ -101,9 +97,8 @@ public class RedisHashIO {
                 batchCount++;
 
                 if (batchCount >= DEFAULT_BATCH_SIZE) {
-                    pipeline.exec();
-                    pipeline.sync();
-                    pipeline.multi();
+                    transaction.exec();
+                    transaction.multi();
                     batchCount = 0;
                 }
             }
@@ -114,17 +109,20 @@ public class RedisHashIO {
                 String fieldKey = hashValue.getKey();
                 String value = hashValue.getValue();
 
-                pipeline.hset(hashKey, fieldKey, value);
+                transaction.sadd(hashKey, fieldKey, value);
 
             }
 
             @FinishBundle
             public void finishBundle() {
-                if (this.pipeline.isInMulti()) {
-                    this.pipeline.exec();
-                    this.pipeline.sync();
+                if (batchCount > 0) {
+                    transaction.exec();
                 }
-                this.batchCount = 0;
+                if (transaction != null) {
+                    transaction.close();
+                }
+                transaction = null;
+                batchCount = 0;
             }
 
             @Teardown
@@ -140,11 +138,11 @@ public class RedisHashIO {
             Builder() {
             }
 
-            abstract RedisHashIO.Write.Builder setExpireTime(Long expireTimeMillis);
+            abstract WritingInMemoryStore.Write.Builder setExpireTime(Long expireTimeMillis);
 
-            abstract RedisHashIO.Write build();
+            abstract WritingInMemoryStore.Write build();
 
-            abstract RedisHashIO.Write.Builder setConnectionConfiguration(RedisConnectionConfiguration connectionConfiguration);
+            abstract WritingInMemoryStore.Write.Builder setConnectionConfiguration(RedisConnectionConfiguration connectionConfiguration);
 
         }
 
