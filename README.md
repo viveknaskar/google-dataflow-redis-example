@@ -1,4 +1,8 @@
 # Dataflow Pipeline Example with Custom Redis Implementation
+[![GitHub stars](https://img.shields.io/github/stars/viveknaskar/google-dataflow-redis-example)](https://github.com/viveknaskar/google-dataflow-redis-example/kapde/stargazers)
+[![GitHub last commit](https://img.shields.io/github/last-commit/viveknaskar/google-dataflow-redis-example)](https://github.com/viveknaskar/google-dataflow-redis-example)
+[![open issues](https://img.shields.io/github/issues/viveknaskar/google-dataflow-redis-example)](https://github.com/viveknaskar/google-dataflow-redis-example/issues)
+
 A custom implementation of HSET for storing data Memorystore in a cloud dataflow project.
 
 ## What does it do here?
